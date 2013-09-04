@@ -44,44 +44,59 @@ class UserPlayer(Player):
 
     def pick_role(self, roles):
         print_numbered_lines('{}', [(role.name,) for role in roles])
-        return int(raw_input('Choose a role: ')) - 1
+
+        while True:
+           choice = raw_input('Choose a role: ')
+           try:
+                choice = int(choice) - 1
+                if choice < 0 or choice >= len(roles):
+                    continue
+                return choice
+           except:
+                pass
 
     def choose_district(self, cards, mandatory=False):
         print_numbered_districts(cards)
         if not mandatory:
             print 'X: Cancel'
 
-        choice = raw_input('Choose a district: ')
-
-        if choice == 'X':
-            return Player.CHOICE_CANCEL
-        else:
-            return int(choice) - 1
+        while True:
+            choice = raw_input('Choose a district: ')
+            if choice == 'X':
+                return Player.CHOICE_CANCEL
+            else:
+                try:
+                    choice = int(choice) - 1
+                    if choice < 0 or choice >= len(cards):
+                        continue
+                    return choice
+                except:
+                    pass
 
     def choose_step_or_power(self, step_name):
         print '1: ' + step_name
         print '2: Role power'
 
-        choice = raw_input('Do step or use power: ')
-
-        if choice == '1':
-            return Player.CHOICE_STEP
-        else:
-            return Player.CHOICE_POWER
+        while True:
+            choice = raw_input('Do step or use power: ')
+            if choice == '1':
+                return Player.CHOICE_STEP
+            elif choice == '2':
+                return Player.CHOICE_POWER
 
     def choose_resource(self):
         print '1: Get 2 gold'
         print '2: Draw two cards and keep one'
         print 'X: Cancel'
 
-        choice = raw_input('Get gold or a card: ')
-
-        if choice == '1':
-            return Player.CHOICE_GOLD
-        elif choice == '2':
-            return Player.CHOICE_CARD
-        else:
-            return Player.CHOICE_CANCEL
+        while True:
+            choice = raw_input('Get gold or a card: ')
+            if choice == '1':
+                return Player.CHOICE_GOLD
+            elif choice == '2':
+                return Player.CHOICE_CARD
+            else:
+                return Player.CHOICE_CANCEL
 
     def choose_district_from_hand(self):
         playable_districts = [district for district in 
@@ -90,73 +105,98 @@ class UserPlayer(Player):
         print 'N: None'
         print 'X: Cancel'
 
-        choice = raw_input('Choose a district from your hand to play: ')
-
-        if choice == 'N':
-            return Player.CHOICE_NONE
-        elif choice == 'X':
-            return Player.CHOICE_CANCEL
-        else:
-            return playable_districts[int(choice) - 1]
+        while True:
+            choice = raw_input('Choose a district from your hand to play: ')
+            if choice == 'N':
+                return Player.CHOICE_NONE
+            elif choice == 'X':
+                return Player.CHOICE_CANCEL
+            else:
+                try:
+                    choice = int(choice) - 1
+                    if choice < 0 or choice >= len(playable_districts):
+                        continue
+                    else:
+                        return playable_districts[choice]
+                except:
+                    pass
 
     def choose_a_role(self, roles):
         print_numbered_lines('{}', [(role.name,) for role in roles])
         print 'X: Cancel'
 
-        choice = raw_input('Choose one of the roles listed: ')
-
-        if choice == 'X':
-            return Player.CHOICE_CANCEL
-        else:
-            return roles[int(choice) - 1]
+        while True:
+            choice = raw_input('Choose one of the roles listed: ')
+            if choice == 'X':
+                return Player.CHOICE_CANCEL
+            else:
+                try:
+                    choice = int(choice) - 1
+                    if choice < 0 or choices >= len(roles):
+                        continue
+                    else:
+                        return roles[choice]
+                except:
+                    pass
 
     def choose_magician_action(self):
         print '1: Exchange your hand with the hand of another player'
         print '2: Place any number of cards from your at the bottom of the District Deck, then draw an equal number of cards'
         print 'X: Cancel'
 
-        choice = raw_input('Choose an action: ')
-
-        if choice == 'X':
-            return Player.CHOICE_CANCEL
-        elif choice == '1':
-            return Player.CHOICE_MAGIC_PLAYER
-        else:
-            return Player.CHOICE_MAGIC_DECK
+        while True:
+            choice = raw_input('Choose an action: ')
+            if choice == 'X':
+                return Player.CHOICE_CANCEL
+            elif choice == '1':
+                return Player.CHOICE_MAGIC_PLAYER
+            elif choice == '2':
+                return Player.CHOICE_MAGIC_DECK
 
     def choose_player(self, player_numbers):
         print_lines('{0}: Player {0}', [(num,) for num in player_numbers])
         print 'X: Cancel'
-        
-        choice = raw_input('Choose one of the listed players: ')
 
-        if choice == 'X':
-            return Player.CHOICE_CANCEL
-        else:
-            return int(choice)
+        while True:
+            choice = raw_input('Choose one of the listed players: ')
+            if choice == 'X':
+                return Player.CHOICE_CANCEL
+            else:
+                try:
+                    choice = int(choice)
+                    if choice in player_numbers:
+                        return choice
+                except:
+                    pass
 
     def choose_cards_in_hand(self):
         choices = list()
         for card in self.hand:
-            choice = raw_input('Discard card {}? (Y/N): '.format(card.name))
-            if choice == 'Y':
-                choices.append(True)
-            else:
-                choices.append(False)
+            while True:
+                choice = raw_input('Discard card {}? (Y/N): '.format(card.name))
+                if choice == 'Y':
+                    choices.append(True)
+                    break
+                elif choice == 'N':
+                    choices.append(False)
+                    break
         return choices
 
     def choose_use_extra_power(self, name):
-        choice = raw_input(
-            'Do you want to use {} power? (Y/N): '.format(name))
-
-        return choice == 'Y'
+        while True:
+            choice = raw_input(
+                'Do you want to use {} power? (Y/N): '.format(name))
+            if choice == 'Y':
+                return True
+            elif choice == 'N':
+                return False
 
     def update_board(self, players, current_player, starting_player):
         if os.name == 'nt':
             os.system('cls')
         else:
             os.system('clear')
-        
+
         # Print board
         for player in players:
             city_info = ' '.join(

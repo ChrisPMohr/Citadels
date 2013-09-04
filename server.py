@@ -26,8 +26,7 @@ class Game(object):
             cards = self.districts.draw(Game.STARTING_CARDS)
             for card in cards:
                 player.add_to_hand(card)
-        self.starting_player = self.players[0]
-#        self.starting_player = random.choice(self.players)
+        self.starting_player = random.choice(self.players)
 
         while not self.is_game_over():
             self.update_board(None)
