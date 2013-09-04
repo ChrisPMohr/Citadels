@@ -12,6 +12,7 @@ class Game(object):
     def main(self):
         self.num_players = 4
         self.available_roles = roles.ROLES
+        self.removed_roles = None
 
         self.initialize_players()
         self.start_game()
@@ -29,12 +30,12 @@ class Game(object):
         self.starting_player = random.choice(self.players)
 
         while not self.is_game_over():
-            self.update_board(None)
             self.game_loop()
         self.end_game()
 
     def game_loop(self):
-        self.roles, removed = self.make_role_pack()
+        self.roles, self.removed_roles = self.make_role_pack()
+        self.update_board(None)
 
         self.initialize_role_variables()
 
@@ -48,26 +49,24 @@ class Game(object):
 
         for role in self.available_roles:
             self.update_board(None)
-            self.send_message('Calling role {}'.format(role.name))
+            self.send_message('Calling role {}', role)
             if role.name in self.role_players:
                 current_player = self.role_players[role.name]
                 if role == self.assassinated_role:
-                    self.send_message(
-                        'Silently skipping turn of player {} with role {}'.format(
-                        current_player.num, role.name))
+                    self.send_message('Silently skipping turn of {} with role {}',
+                                      current_player, role)
                     continue
 
                 if role == self.thieved_role:
-                    self.send_message(
-                        'Thief steals the gold of player {} with role {}'.format(
-                        current_player.num, role.name))
+                    self.send_message('{}, the Thief steals the gold of {}',
+                                      self.role_players['Thief'], current_player)
                     self.role_players['Thief'].gold += current_player.gold
                     current_player.gold = 0
 
                 if role.name == 'King':
                     self.send_message(
-                        'Player {} is crowned the king and is now starting '
-                        'player'.format(current_player.num))
+                        '{} is crowned King and is now starting player',
+                        current_player)
                     self.starting_player = current_player
 
                 self.do_turn(current_player)
@@ -78,15 +77,13 @@ class Game(object):
 
         if (self.assassinated_role and
             self.assassinated_role.name in self.role_players):
-            self.send_message(
-                'Player {} was the {}, who was assassinated'.format(
-                    self.role_players[self.assassinated_role.name].num,
-                    self.assassinated_role.name))
+            self.send_message('{}, the {}, was assassinated this turn',
+                            self.role_players[self.assassinated_role.name],
+                            self.assassinated_role)
             if self.assassinated_role.name == 'King':
                 king_player = self.role_players['King']
-                self.send_message(
-                    'Player {} is heir to the assassinated king and is now '
-                    'starting player'.format(king_player.num))
+                self.send_message('{} is heir to the assassinated king and '
+                                  'is now starting player', king_player)
                 self.starting_player = king_player
 
     def initialize_players(self):
@@ -114,10 +111,7 @@ class Game(object):
                 roles.remove(role)
                 roles.append(role)
 
-        removed = roles[:num_removed]
-        self.send_message('Removed ' + ', '.join([card.name for card in removed]))
-        roles = roles[num_removed:]
-        return roles, removed
+        return roles[num_removed:], roles[:num_removed]
 
     def draft_role(self, player):
         choice = player.pick_role(self.roles)
@@ -150,11 +144,11 @@ class Game(object):
     def get_resource(self, player):
         choice = player.choose_resource()
         if choice == Player.CHOICE_GOLD:
-            self.send_message('Chose to take gold')
+            self.send_message('{} chose to take gold', player)
             ACTION_GOLD = 2
             player.gold += ACTION_GOLD
         elif choice == Player.CHOICE_CARD:
-            self.send_message('Chose to take cards')
+            self.send_message('{} chose to take a card', player)
             ACTION_CARDS = 2
             cards = self.districts.draw(ACTION_CARDS)
             kept_card = cards.pop(player.choose_district(cards, True))
@@ -192,8 +186,7 @@ class Game(object):
                     player.gold -= choice.cost
                     # Do whatever rules changes needed
 
-                    self.send_message(
-                        'Playing district {}'.format(choice))
+                    self.send_message('Playing {}', choice)
                     self.update_board(player)
                     if not self.finished and player.finished_city():
                         self.send_message('Game will end at the end of this round')
@@ -222,9 +215,9 @@ class Game(object):
                 score += 4
             elif player.finished_city():
                 score += 2
-            scores.append((score, player.num))
+            scores.append((score, player))
         scores.sort(reverse=True)
-        self.send_message('Winner is player {}!'.format(scores[0][1]))
+        self.send_message('Winner is {}!'.format(scores[0][1]))
         self.send_message('\n'.join(['Scores'] + 
             ['Player {}: {}'.format(score[1], score[0]) for score in scores]))
  
@@ -234,11 +227,12 @@ class Game(object):
 
     def update_board(self, current_player):
         for player in self.players:
-            player.update_board(self.players, current_player, self.starting_player)
+            player.update_board(self.players, current_player,
+                                self.starting_player, self.removed_roles)
 
-    def send_message(self, message):
+    def send_message(self, message, *args):
         for player in self.players:
-            player.send_message(message)
+            player.send_message(message, *args)
 
 game = Game()
 game.main()

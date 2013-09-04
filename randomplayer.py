@@ -47,8 +47,8 @@ class RandomPlayer(Player):
     def choose_use_extra_power(self, name):
         return False
 
-    def update_board(self, players, current_player, starting_player):
+    def update_board(self, players, current_player, starting_player, removed_roles):
         pass
 
-    def send_message(self, message):
+    def send_message(self, message, *args):
         pass
