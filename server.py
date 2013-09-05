@@ -219,12 +219,15 @@ class Game(object):
                 score += 4
             elif player.finished_city():
                 score += 2
+            if self.has_all_colors(player.city):
+                score += 3
             scores.append((score, player))
         scores.sort(reverse=True)
-        self.send_message('Winner is {}!', scores[0][1])
-        self.send_message('\n'.join(['Scores'] + 
-            ['Player {}: {}'.format(score[1], score[0]) for score in scores]))
- 
+        self.send_score_message(scores)
+
+    def has_all_colors(self, city):
+        return len(set([district.color for district in city])) == 5
+
     def initialize_role_variables(self):
         self.assassinated_role = None
         self.thieved_role = None
@@ -237,6 +240,14 @@ class Game(object):
     def send_message(self, message, *args):
         for player in self.players:
             player.send_message(message, *args)
+
+    def send_score_message(self, scores):
+        self.send_message('Winner is {}!', scores[0][1])
+        self.send_message(
+            '\n'.join(['Scores:'] + 
+            ['{}: '+ str(score[0]) for score in scores]),
+            *[score[1] for score in scores])
+ 
 
 game = Game()
 game.main()
