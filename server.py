@@ -34,10 +34,27 @@ class Game(object):
         self.end_game()
 
     def game_loop(self):
+        self.initialize_role_variables()
+        self.do_drafting()
+        self.do_player_turns()
+        self.do_end_of_turn()
+
+    def initialize_players(self):
+        self.players = [UserPlayer()]
+        self.players.extend([RandomPlayer() for _
+                             in range(self.num_players - 1)])
+
+        for i, player in enumerate(self.players, 1):
+            player.num = i 
+
+        last_player = self.players[0]
+        for player in reversed(self.players):
+            player.next_player = last_player
+            last_player = player
+
+    def do_drafting(self):
         self.roles, self.removed_roles = self.make_role_pack()
         self.update_board(None)
-
-        self.initialize_role_variables()
 
         current_player = self.starting_player
         self.role_players = dict()
@@ -47,6 +64,7 @@ class Game(object):
             self.draft_role(current_player)
             current_player = current_player.next_player
 
+    def do_player_turns(self):
         for role in self.available_roles:
             self.update_board(None)
             self.send_message('Calling role {}', role)
@@ -71,10 +89,9 @@ class Game(object):
 
                 self.do_turn(current_player)
 
+    def do_end_of_turn(self):
         self.update_board(None)
-
         self.send_message('Turn over')
-
         if (self.assassinated_role and
             self.assassinated_role.name in self.role_players):
             self.send_message('{}, the {}, was assassinated this turn',
@@ -85,19 +102,6 @@ class Game(object):
                 self.send_message('{} is heir to the assassinated king and '
                                   'is now starting player', king_player)
                 self.starting_player = king_player
-
-    def initialize_players(self):
-        self.players = [UserPlayer()]
-        self.players.extend([RandomPlayer() for _
-                             in range(self.num_players - 1)])
-
-        for i, player in enumerate(self.players, 1):
-            player.num = i 
-
-        last_player = self.players[0]
-        for player in reversed(self.players):
-            player.next_player = last_player
-            last_player = player
 
     def make_role_pack(self):
         roles = list(self.available_roles)
@@ -217,7 +221,7 @@ class Game(object):
                 score += 2
             scores.append((score, player))
         scores.sort(reverse=True)
-        self.send_message('Winner is {}!'.format(scores[0][1]))
+        self.send_message('Winner is {}!', scores[0][1])
         self.send_message('\n'.join(['Scores'] + 
             ['Player {}: {}'.format(score[1], score[0]) for score in scores]))
  

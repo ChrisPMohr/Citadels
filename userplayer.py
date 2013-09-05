@@ -163,7 +163,7 @@ class UserPlayer(Player):
             else:
                 try:
                     choice = int(choice) - 1
-                    if choice < 0 or choices >= len(roles):
+                    if choice < 0 or choice >= len(roles):
                         continue
                     else:
                         return roles[choice]
