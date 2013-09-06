@@ -117,6 +117,7 @@ def warlord_extra_power(player, game):
                             choice = other_player.choose_binary(
                                 'Pay 1 gold to put {} in your hand', choice)
                             if choice:
+                                other_player.gold -= 1
                                 other_player.add_to_hand(choice)
                                 game.send_message('{} has recovered {}',
                                     other_player, choice)

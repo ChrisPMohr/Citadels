@@ -7,7 +7,7 @@ from roles import Role
 colorama.init()
 
 ansi_colors = {'Red': colorama.Fore.RED,
-               'Blue': colorama.Fore.BLUE,
+               'Blue': colorama.Fore.CYAN,
                'Yellow': colorama.Fore.YELLOW,
                'Green': colorama.Fore.GREEN,
                'Purple': colorama.Fore.MAGENTA}
@@ -16,12 +16,16 @@ def color(str, color):
     return ansi_colors[color] + str + colorama.Fore.RESET
 
 def print_lines(format_str, print_list):
-    print '\n'.join(format_str.format(*k) for k in print_list)
+    out = '\n'.join(format_str.format(*k) for k in print_list)
+    if out:
+        print out
 
 def print_numbered_lines(format_str, print_list, start=1):
     format_str = '{}: ' + format_str
-    print '\n'.join(format_str.format(num, *k) for num, k 
+    out = '\n'.join(format_str.format(num, *k) for num, k 
                     in enumerate(print_list, start))
+    if out:
+        print out
 
 def print_numbered_districts(cards):
     print_numbered_lines(
@@ -88,35 +92,38 @@ class UserPlayer(Player):
                 except:
                     pass
 
-    def choose_step_or_power(self, step_name):
+    def choose_action(self, played_district):
         self.print_board()
 
         cards = self.cards_with_unused_powers()
+        answers = list()
 
-        print '1: ' + step_name
-        print_numbered_lines('{} Power',
-            [(format_object(card),) for card in cards], 2)
+        if not played_district:
+            print '1: Play a District'
+            answers.append(Player.CHOICE_PLAY_DISTRICT)
+        print_numbered_lines('Use {} power',
+            [(format_object(card),) for card in cards], len(answers) + 1)
+        answers.extend(cards)
+
+        print '{}: End the turn'.format(len(answers) + 1)
+        answers.append(Player.CHOICE_END_TURN)
 
         while True:
-            choice = raw_input('Do step or use a power: ')
-            if choice == '1':
-                return Player.CHOICE_STEP
-            else:
-                try:
-                    choice = int(choice) - 2
-                    if choice < 0 or choice >= len(cards):
-                        continue
-                    else:
-                        return cards[choice]
-                except:
-                    pass
+            choice = raw_input('Choose an action: ')
+            try:
+                choice = int(choice) - 1
+                if choice < 0 or choice >= len(answers):
+                    continue
+                else:
+                    return answers[choice]
+            except:
+                pass
 
     def choose_resource(self):
         self.print_board()
 
         print '1: Get gold'
         print '2: Get card'
-        print 'X: Cancel'
 
         while True:
             choice = raw_input('Get gold or a card: ')
@@ -124,8 +131,6 @@ class UserPlayer(Player):
                 return Player.CHOICE_GOLD
             elif choice == '2':
                 return Player.CHOICE_CARD
-            elif choice == 'X':
-                return Player.CHOICE_CANCEL
 
     def choose_district_from_hand(self):
         self.print_board()

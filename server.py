@@ -11,7 +11,7 @@ class Game(object):
     STARTING_CARDS = 4
 
     def main(self):
-        self.num_players = 6
+        self.num_players = 4
         self.available_roles = roles.ROLES
         self.removed_roles = None
         self.game_over = False
@@ -72,8 +72,7 @@ class Game(object):
             if role.name in self.role_players:
                 current_player = self.role_players[role.name]
                 if role == self.assassinated_role:
-                    self.send_message('Silently skipping turn of {} with role {}',
-                                      current_player, role)
+                    # Silently skip this player's turn
                     continue
 
                 if role == self.thieved_role:
@@ -124,32 +123,30 @@ class Game(object):
         self.role_players[player.role.name] = player
 
     def do_turn(self, player):
-        turn_steps = [('Get resources', self.get_resource),
-                      ('Play district', self.may_play_district),
-                      ('End turn', self.end_turn)]
-
         player.reset_powers()
 
-        for step_name, step in turn_steps:
-            did_step = False
-            while not did_step:
-                self.update_board(player)
-                if player.cards_with_unused_powers():
-                    choice = player.choose_step_or_power(step_name)
-                    if choice == Player.CHOICE_STEP:
-                        did_step = step(player)
-                    else:
-                        choice.power.used = choice.power(player, self)
-                else:
-                    did_step = step(player)
+        self.get_resource(player)
+
+        played_district = False
+        while not played_district or player.cards_with_unused_powers():
+            self.update_board(player)
+            choice = player.choose_action(played_district)
+            if choice == Player.CHOICE_PLAY_DISTRICT:
+                    played_district = self.may_play_district(player)
+            elif choice == Player.CHOICE_END_TURN:
+                break
+            else:
+                choice.power.used = choice.power(player, self)
+        self.end_turn(player)
 
     def get_resource(self, player):
+        self.update_board(player)
         choice = player.choose_resource()
         if choice == Player.CHOICE_GOLD:
             self.send_message('{} chose to take gold', player)
             NUM_GOLD = 2
             player.gold += NUM_GOLD
-        elif choice == Player.CHOICE_CARD:
+        else:
             self.send_message('{} chose to take a card', player)
             
             NUM_CARDS_DRAW = 2
@@ -165,8 +162,6 @@ class Game(object):
                 cards.remove(kept_card)
                 player.add_to_hand(kept_card)
             self.districts.put_on_bottom(cards)
-        else:
-            return False
 
         if player.role.name == 'Merchant':
             player.gold += 1
@@ -174,7 +169,6 @@ class Game(object):
             cards = self.districts.draw(2)
             for card in cards:
                 player.add_to_hand(card)
-        return True
 
     def may_play_district(self, player):
         ALLOWED_TO_PLAY = 1
@@ -218,7 +212,6 @@ class Game(object):
             while not used_extra_power:
                 self.update_board(player)
                 used_extra_power = roles.warlord_extra_power(player, self)
-        return True
 
     def end_game(self):
         self.send_message('Game over')

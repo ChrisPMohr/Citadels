@@ -9,13 +9,15 @@ class RandomPlayer(Player):
         return random.randint(0, len(roles) - 1)
 
     def choose_district(self, cards, mandatory=False):
-        return random.choice(cards)
+        if cards:
+            return random.choice(cards)
+        return Player.CHOICE_CANCEL
 
-    def choose_step_or_power(self, step_name):
-        if random.random() < 0.5 or step_name != 'End turn':
+    def choose_action(self, played_district):
+        if random.random() < 0.5 or played_district:
             if self.cards_with_unused_powers():
                 return random.choice(self.cards_with_unused_powers())
-        return Player.CHOICE_STEP
+        return Player.CHOICE_PLAY_DISTRICT
 
     def choose_resource(self):
         if random.random() < 0.5:
@@ -39,14 +41,16 @@ class RandomPlayer(Player):
 
     def choose_player(self, player_numbers):
         if player_numbers:
-            random.choice(player_numbers)
+            return random.choice(player_numbers)
         else:
-            Player.CHOICE_CANCEL
+            return Player.CHOICE_CANCEL
 
     def choose_cards_in_hand(self):
         return [random.randint(0,1) for _ in range(len(self.hand))]
 
     def choose_binary(self, message, *args):
+        if 'destroy' in message:
+            return True
         if random.random() < 0.5:
             return True
         else:
