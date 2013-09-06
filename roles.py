@@ -88,8 +88,7 @@ def warlord_extra_power(player, game):
     if player.choose_binary('Pay gold to destroy a district'):
         targetable_players = list()
         for target_player in game.players:
-            if (target_player != player and
-                target_player.role.name != 'Bishop' and
+            if (target_player.role.name != 'Bishop' and
                 warlord_targets(player, target_player) and
                 not target_player.finished_city()):
                 targetable_players.append(target_player.num)

@@ -40,8 +40,13 @@ class RandomPlayer(Player):
        return random.choice([Player.CHOICE_MAGIC_PLAYER, Player.CHOICE_MAGIC_DECK, Player.CHOICE_CANCEL])
 
     def choose_player(self, player_numbers):
-        if player_numbers:
-            return random.choice(player_numbers)
+        copy = list(player_numbers)
+        try:
+            copy.remove(self.num)
+        except:
+            pass
+        if copy:
+            return random.choice(copy)
         else:
             return Player.CHOICE_CANCEL
 

@@ -99,7 +99,7 @@ class UserPlayer(Player):
         answers = list()
 
         if not played_district:
-            print '1: Play a District'
+            print '1: Play a district'
             answers.append(Player.CHOICE_PLAY_DISTRICT)
         print_numbered_lines('Use {} power',
             [(format_object(card),) for card in cards], len(answers) + 1)
@@ -181,7 +181,7 @@ class UserPlayer(Player):
         self.print_board()
 
         print '1: Exchange your hand with the hand of another player'
-        print '2: Place any number of cards from your at the bottom of the District Deck, then draw an equal number of cards'
+        print '2: Place any number of cards from your hand on the bottom of the District Deck, then draw that many cards'
         print 'X: Cancel'
 
         while True:
