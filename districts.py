@@ -1,4 +1,5 @@
 import random
+from player import Player
 
 class Colors:
     Green = 'Green'
@@ -18,6 +19,21 @@ class District(object):
     def __repr__(self):
         return '({}, {})'.format(self.name, self.cost)
 
+def laboratory_power(player, game):
+    choice = player.choose_district(player.hand)
+    if choice == Player.CHOICE_CANCEL:
+        return False
+    player.hand.remove(choice)
+    player.gold += 1
+    return True
+
+def smithy_power(player, game):
+    if player.gold < 3:
+        return False
+    player.gold -= 3
+    for card in game.districts.draw(2):
+        player.add_to_hand(card)
+    return True
 
 class DistrictDeck(object):
     GREEN_DISTRICTS = [(5, 'Tavern', 'Tvrn', 1),
@@ -42,8 +58,8 @@ class DistrictDeck(object):
 
     PURPLE_DISTRICTS = [(1, 'Haunted City', 'HnCt', 2),
                         (2, 'Keep', 'Keep', 3),
-                        (1, 'Laboratory', 'Lab ', 5),
-                        (1, 'Smith', 'Smth', 5),
+                        (1, 'Laboratory', 'Lab ', 5, laboratory_power),
+                        (1, 'Smithy', 'Smty', 5, smithy_power),
                         (1, 'Observatory', 'Obty', 5),
                         (1, 'Graveyard', 'Gvyd', 5),
                         (1, 'Dragon Gate', 'DrGt', 6),

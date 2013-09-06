@@ -3,6 +3,7 @@ from player import Player
 from randomplayer import RandomPlayer
 from userplayer import UserPlayer
 from districts import Colors, DistrictDeck
+from debugger import Debugger
 import roles
 
 class Game(object):
@@ -10,31 +11,31 @@ class Game(object):
     STARTING_CARDS = 4
 
     def main(self):
-        self.num_players = 4
+        self.num_players = 6
         self.available_roles = roles.ROLES
         self.removed_roles = None
+        self.game_over = False
+
+        self.districts = DistrictDeck()
 
         self.initialize_players()
+        self.starting_player = random.choice(self.players)
+
         self.start_game()
 
     def start_game(self):
-        self.districts = DistrictDeck()
-
-        self.finished = False
-
         for player in self.players:
             player.gold += Game.STARTING_GOLD
             cards = self.districts.draw(Game.STARTING_CARDS)
             for card in cards:
                 player.add_to_hand(card)
-        self.starting_player = random.choice(self.players)
 
-        while not self.is_game_over():
+        while not self.game_over:
             self.game_loop()
         self.end_game()
 
     def game_loop(self):
-        self.initialize_role_variables()
+        self.start_turn()
         self.do_drafting()
         self.do_player_turns()
         self.do_end_of_turn()
@@ -76,7 +77,7 @@ class Game(object):
                     continue
 
                 if role == self.thieved_role:
-                    self.send_message('{}, the Thief steals the gold of {}',
+                    self.send_message('{}, the Thief, steals the gold of {}',
                                       self.role_players['Thief'], current_player)
                     self.role_players['Thief'].gold += current_player.gold
                     current_player.gold = 0
@@ -123,25 +124,22 @@ class Game(object):
         self.role_players[player.role.name] = player
 
     def do_turn(self, player):
-        if player.role.power:
-            can_use_power = True
-        else:
-            can_use_power = False
-
         turn_steps = [('Get resources', self.get_resource),
-                      ('Play district', self.play_district),
+                      ('Play district', self.may_play_district),
                       ('End turn', self.end_turn)]
+
+        player.reset_powers()
 
         for step_name, step in turn_steps:
             did_step = False
             while not did_step:
                 self.update_board(player)
-                if can_use_power:
-                    if (player.choose_step_or_power(step_name) ==
-                        Player.CHOICE_STEP):
+                if player.cards_with_unused_powers():
+                    choice = player.choose_step_or_power(step_name)
+                    if choice == Player.CHOICE_STEP:
                         did_step = step(player)
                     else:
-                        can_use_power = not player.role.power(player, self)
+                        choice.power.used = choice.power(player, self)
                 else:
                     did_step = step(player)
 
@@ -149,14 +147,23 @@ class Game(object):
         choice = player.choose_resource()
         if choice == Player.CHOICE_GOLD:
             self.send_message('{} chose to take gold', player)
-            ACTION_GOLD = 2
-            player.gold += ACTION_GOLD
+            NUM_GOLD = 2
+            player.gold += NUM_GOLD
         elif choice == Player.CHOICE_CARD:
             self.send_message('{} chose to take a card', player)
-            ACTION_CARDS = 2
-            cards = self.districts.draw(ACTION_CARDS)
-            kept_card = cards.pop(player.choose_district(cards, True))
-            player.add_to_hand(kept_card)
+            
+            NUM_CARDS_DRAW = 2
+            NUM_CARDS_KEEP = 1
+            if player.has_district('Observatory'):
+                NUM_CARDS_DRAW += 1
+            if player.has_district('Library'):
+                NUM_CARDS_KEEP += 1
+
+            cards = self.districts.draw(NUM_CARDS_DRAW)
+            for _ in range(NUM_CARDS_KEEP):
+                kept_card = player.choose_district(cards, True)
+                cards.remove(kept_card)
+                player.add_to_hand(kept_card)
             self.districts.put_on_bottom(cards)
         else:
             return False
@@ -169,7 +176,7 @@ class Game(object):
                 player.add_to_hand(card)
         return True
 
-    def play_district(self, player):
+    def may_play_district(self, player):
         ALLOWED_TO_PLAY = 1
         if player.role.name == 'Architect':
             ALLOWED_TO_PLAY += 2
@@ -186,18 +193,24 @@ class Game(object):
             else:
                 if player.can_play(choice):
                     player.remove_from_hand(choice)
-                    player.add_to_city(choice)
                     player.gold -= choice.cost
-                    # Do whatever rules changes needed
 
-                    self.send_message('Playing {}', choice)
-                    self.update_board(player)
-                    if not self.finished and player.finished_city():
-                        self.send_message('Game will end at the end of this round')
-                        self.finished = True
-                        player.first_to_finish = True
+                    self.play_district(player, choice)
                     played += 1
         return True
+
+    def play_district(self, player, district):
+        player.add_to_city(district)
+
+        if district.name == 'Haunted City':
+            district.played_this_turn = True
+
+        self.send_message('{} playing {}', player, district)
+        self.update_board(player)
+        if not self.game_over and player.finished_city():
+            self.send_message('Game will end at the end of this round')
+            self.game_over = True
+            player.first_to_finish = True
 
     def end_turn(self, player):
         if player.role.name == 'Warlord':
@@ -206,9 +219,6 @@ class Game(object):
                 self.update_board(player)
                 used_extra_power = roles.warlord_extra_power(player, self)
         return True
-
-    def is_game_over(self):
-        return self.finished
 
     def end_game(self):
         self.send_message('Game over')
@@ -221,16 +231,29 @@ class Game(object):
                 score += 2
             if self.has_all_colors(player.city):
                 score += 3
+            score += player.bonus_points()
             scores.append((score, player))
         scores.sort(reverse=True)
         self.send_score_message(scores)
 
     def has_all_colors(self, city):
-        return len(set([district.color for district in city])) == 5
+        NEEDED_COLORS = 5
+        districts = list(city)
+        for district in city:
+            if district.name == 'Haunted City' and not district.played_this_turn:
+                districts.remove(district)
+                NEEDED_COLORS -= 1
+                break
+        return len(set([district.color for district in districts])) == NEEDED_COLORS
 
-    def initialize_role_variables(self):
+    def start_turn(self):
         self.assassinated_role = None
         self.thieved_role = None
+        for player in self.players:
+            player.role = None
+            for district in player.city:
+                if district.name == 'Haunted City':
+                    district.played_this_turn = False
 
     def update_board(self, current_player):
         for player in self.players:

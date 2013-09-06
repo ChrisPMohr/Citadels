@@ -1,28 +1,27 @@
 import os
-from colorama import init, Fore
+import colorama
 from player import Player
 from districts import District, Colors
 from roles import Role
 
-ansi_colors = {'Red': Fore.RED,
-               'Blue': Fore.BLUE,
-               'Yellow': Fore.YELLOW,
-               'Green': Fore.GREEN,
-               'Purple': Fore.MAGENTA}
+colorama.init()
+
+ansi_colors = {'Red': colorama.Fore.RED,
+               'Blue': colorama.Fore.BLUE,
+               'Yellow': colorama.Fore.YELLOW,
+               'Green': colorama.Fore.GREEN,
+               'Purple': colorama.Fore.MAGENTA}
 
 def color(str, color):
-    return ansi_colors[color] + str + Fore.RESET
-
-init()
-
+    return ansi_colors[color] + str + colorama.Fore.RESET
 
 def print_lines(format_str, print_list):
     print '\n'.join(format_str.format(*k) for k in print_list)
 
-def print_numbered_lines(format_str, print_list):
+def print_numbered_lines(format_str, print_list, start=1):
     format_str = '{}: ' + format_str
     print '\n'.join(format_str.format(num, *k) for num, k 
-                    in enumerate(print_list, 1))
+                    in enumerate(print_list, start))
 
 def print_numbered_districts(cards):
     print_numbered_lines(
@@ -41,7 +40,7 @@ def format_object(arg):
     elif isinstance(arg, Role):
         return arg.name
     else:
-        new_args.append(str(arg))
+        return str(arg)
 
 def format_string(message, *args):
     formatted_args = list()
@@ -53,13 +52,6 @@ def format_string(message, *args):
 class UserPlayer(Player):
     def __init__(self):
        super(UserPlayer, self).__init__()
-#       self.city = [District('Town Hall', 'TwnH', 5, Colors.Green),
-#                    District('Town Hall', 'TwnH', 5, Colors.Green),
-#                    District('Town Hall', 'TwnH', 5, Colors.Green),
-#                    District('Town Hall', 'TwnH', 5, Colors.Green),
-#                    District('Town Hall', 'TwnH', 5, Colors.Green),
-#                    District('Town Hall', 'TwnH', 5, Colors.Green),
-#                    District('Town Hall', 'TwnH', 5, Colors.Green)]
 
     def pick_role(self, roles):
         self.print_board()
@@ -92,28 +84,38 @@ class UserPlayer(Player):
                     choice = int(choice) - 1
                     if choice < 0 or choice >= len(cards):
                         continue
-                    return choice
+                    return cards[choice]
                 except:
                     pass
 
     def choose_step_or_power(self, step_name):
         self.print_board()
 
+        cards = self.cards_with_unused_powers()
+
         print '1: ' + step_name
-        print '2: Role power'
+        print_numbered_lines('{} Power',
+            [(format_object(card),) for card in cards], 2)
 
         while True:
-            choice = raw_input('Do step or use power: ')
+            choice = raw_input('Do step or use a power: ')
             if choice == '1':
                 return Player.CHOICE_STEP
-            elif choice == '2':
-                return Player.CHOICE_POWER
+            else:
+                try:
+                    choice = int(choice) - 2
+                    if choice < 0 or choice >= len(cards):
+                        continue
+                    else:
+                        return cards[choice]
+                except:
+                    pass
 
     def choose_resource(self):
         self.print_board()
 
-        print '1: Get 2 gold'
-        print '2: Draw two cards and keep one'
+        print '1: Get gold'
+        print '2: Get card'
         print 'X: Cancel'
 
         while True:
@@ -122,7 +124,7 @@ class UserPlayer(Player):
                 return Player.CHOICE_GOLD
             elif choice == '2':
                 return Player.CHOICE_CARD
-            else:
+            elif choice == 'X':
                 return Player.CHOICE_CANCEL
 
     def choose_district_from_hand(self):
@@ -219,12 +221,11 @@ class UserPlayer(Player):
                     break
         return choices
 
-    def choose_use_extra_power(self, name):
+    def choose_binary(self, message, *args):
         self.print_board()
 
         while True:
-            choice = raw_input(
-                'Do you want to use {} power? (Y/N): '.format(name))
+            choice = raw_input(format_string(message + '? (Y/N): ', *args))
             if choice == 'Y':
                 return True
             elif choice == 'N':
